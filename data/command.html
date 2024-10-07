@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Board Control</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Board Control</h1>
+    <form action="/execute">
+      <fieldset>
+        <legend>Send command</legend>
+        <p>payload: <input type="text" name="code" /></p>
+        <p>
+          protocol:
+          <select name="protocol" id="protocol"></select>
+        </p>
+        <input type="submit" value="Submit" />
+      </fieldset>
+    </form>
+    <script type="text/javascript">
+      const select = document.getElementById("protocol");
+      for (let i = 1; i <= 16; i++) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = i;
+        select.appendChild(option);
+      }
+    </script>
+  </body>
+</html>
