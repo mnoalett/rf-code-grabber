@@ -3,69 +3,53 @@
 
 #include <RCSwitch.h>
 #include <ELECHOUSE_CC1101.h>
+#include <Preferences.h>
 #include "Logging.h"
 
-typedef struct
+constexpr auto AM270 = 256;
+constexpr auto AM650 = 650;
+constexpr auto AM812 = 812;
+constexpr int BANDWIDTHS[] = {AM270, AM650, AM812};
+constexpr auto FREQUENCY_PREFERENCE_NAME = "frequency";
+constexpr auto PARAM_BANDWIDHT_NAME = "bandwidth";
+constexpr double FREQUENCIES[] = {
+    300.0, 310.0, 315.0, 315.1, 315.4, 315.8, 318.0, 390.0, 433.0, 433.075, 433.330,
+    433.650, 433.92, 433.94, 868.025, 868.3, 868.35, 868.7, 915.0, 915.025, 915.2, 915.5};
+
+extern Preferences preferences;
+extern RCSwitch rcSwitch;
+extern double defaultFrequency;
+extern int defaultBandwidth;
+
+enum Protocol
 {
-    unsigned long decimalValue;
-    unsigned int length;
-    unsigned int delay;
-    unsigned int protocol;
-    unsigned int *raw;
-    char *bytes;
-} Signal;
+    CAME,
+    FAAC,
+    PRINCETON,
+    NICE_FLO,
+    NICE_FLOR_S,
+    PROTOCOL_COUNT
+};
 
-static RCSwitch rcSwitch = RCSwitch();
-int rxPin;
-int txPin;
-
-void initializeRadio()
+class Radio
 {
-#ifdef ESP32
-    rxPin = 4;
-    txPin = 0;
-#elif ESP8266
-    rxPin = D1;
-    txPin = D2;
-#else
-    rxPin = 0; // for Arduino! Receiver on interrupt 0 => that is pin #2
-#endif
-
-    if (!ELECHOUSE_cc1101.getCC1101())
+public:
+    static Radio &getInstance()
     {
-        ERROR("SPI connection error");
-    }
-    else
-    {
-        INFO("SPI connection OK");
+        static Radio instance;
+        return instance;
     }
 
-    ELECHOUSE_cc1101.Init();
-    ELECHOUSE_cc1101.setMHZ(433.92);
-    ELECHOUSE_cc1101.SetRx();
-    rcSwitch.setRepeatTransmit(15);
-    rcSwitch.enableReceive(rxPin);
-}
+    void initialize();
+    void setFrequency(double frequency);
+    void setBandwidth(int bandwidth);
+    void setRepeatTransmit(int nRepeat);
+    void sendCode(String code, int protocol);
+    void sendCode(String code, int len, int protocol);
+    String protocolToString(Protocol p);
 
-void sendCode(String code, int protocol)
-{
-    rcSwitch.disableReceive();
-    rcSwitch.enableTransmit(txPin);
-    ELECHOUSE_cc1101.SetTx();
-
-    INFOF("Sending %s\n\t\t\tProtocol %d", code.c_str(), protocol);
-
-    rcSwitch.setProtocol(protocol);
-    rcSwitch.send(code.c_str());
-    delay(1000);
-
-    rcSwitch.disableTransmit();
-    ELECHOUSE_cc1101.SetRx();
-    ELECHOUSE_cc1101.SetTx();
-    ELECHOUSE_cc1101.SetRx();
-    rcSwitch.enableReceive(rxPin);
-
-    rcSwitch.resetAvailable();
-}
+private:
+    Radio();
+};
 
 #endif

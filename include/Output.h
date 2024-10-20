@@ -89,9 +89,9 @@ static char *dec2binWzerofill(unsigned long Dec, unsigned int bitLength)
   return bin;
 }
 
-static String toJsonString(unsigned long decimal, unsigned int length, unsigned int delay, char *b, unsigned int protocol)
+static String toJsonString(unsigned long decimal, unsigned int length, unsigned int delay, char *b, unsigned int protocol, unsigned int *raw)
 {
-  JsonDocument jsonDocument;
+  DynamicJsonDocument jsonDocument(1024);
 
   jsonDocument["decimal"] = decimal;
   jsonDocument["length"] = length;
@@ -99,6 +99,13 @@ static String toJsonString(unsigned long decimal, unsigned int length, unsigned 
   jsonDocument["b"] = b;
   jsonDocument["tri-state"] = bin2tristate(b);
   jsonDocument["protocol"] = protocol;
+
+  JsonArray rawArray = jsonDocument.createNestedArray("raw");
+
+  for (unsigned int i = 0; i <= length * 2; i++)
+  {
+    rawArray.add(raw[i]);
+  }
 
   String signalPayload;
   serializeJson(jsonDocument, signalPayload);

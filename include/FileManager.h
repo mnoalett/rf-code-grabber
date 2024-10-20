@@ -1,4 +1,10 @@
+#ifndef filemanager_h
+#define filemanager_h
+
 #include "LittleFS.h"
+#include "Logging.h"
+
+constexpr char *LOG_FILE = "capture.txt";
 
 class FileManager
 {
@@ -19,3 +25,5 @@ public:
 private:
     FileManager();
 };
+
+#endif

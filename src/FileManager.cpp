@@ -27,12 +27,10 @@ void FileManager::listFiles()
 
 void FileManager::readFile(const char *path)
 {
-    Serial.printf("Reading file: %s\n", path);
-
     File file = LittleFS.open(path, "r");
     if (!file)
     {
-        Serial.println("Failed to open file for reading");
+        ERROR("Failed to open file for reading");
         return;
     }
 
@@ -55,17 +53,15 @@ void FileManager::createFile(const char *path)
 
 boolean FileManager::writeFile(const char *path, const char *message)
 {
-    Serial.printf("Writing file: %s\n", path);
-
     File file = LittleFS.open(path, "w");
     if (!file)
     {
-        Serial.println("[FileManager] Failed to open file for writing");
+        ERROR("Failed to open file for writing");
         return false;
     }
     if (!file.print(message))
     {
-        Serial.println("[FileManager] Write failed");
+        ERROR("Write failed");
         return false;
     }
     delay(2000); // Make sure the CREATE and LASTWRITE times are different
@@ -78,7 +74,7 @@ boolean FileManager::appendFile(const char *path, const char *message)
     File file = LittleFS.open(path, "a");
     if (!file)
     {
-        Serial.println("Failed to open file for appending");
+        ERROR("Failed to open file for appending");
         return false;
     }
     file.print(message);
@@ -88,10 +84,9 @@ boolean FileManager::appendFile(const char *path, const char *message)
 
 boolean FileManager::deleteFile(const char *path)
 {
-    Serial.printf("Deleting file: %s\n", path);
     if (LittleFS.remove(path))
     {
-        Serial.println("File deleted");
+        INFOF("File %s deleted\n", path);
         return true;
     }
     return false;

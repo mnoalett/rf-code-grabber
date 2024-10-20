@@ -5,11 +5,134 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Board Control</title>
     <link rel="stylesheet" href="style.css" />
+    <script type="text/javascript" src="main.js"></script>
   </head>
   <body>
     <h1>Board Control</h1>
-    <a class="button" href="/download">Download log file</a>
-    <a class="button" href="/command">Transmit command</a>
-    <a class="button warning" href="/delete">Erase flash</a>
+    <ul class="tabs">
+      <li class="active-tab" data-tab="log">Log</li>
+      <li data-tab="transmit">Transmit</li>
+      <li data-tab="settings">Settings</li>
+    </ul>
+
+    <ul class="tabs-content">
+      <li>
+        <a class="button" href="/download">Download log</a>
+        <a class="button warning" href="/delete">Delete log</a>
+      </li>
+      <li>
+        <fieldset>
+          <legend>Binary payload</legend>
+          <form id="binary">
+            <div class="control">
+              <label for="code">Binary:</label
+              ><textarea cols="30" rows="2" name="code"></textarea>
+            </div>
+            <div class="control">
+              <label for="protocol">Protocol:</label
+              ><select name="protocol" id="protocol"></select>
+            </div>
+            <div class="control">
+              <label for="repeat">Repeat transmit:</label
+              ><input
+                type="number"
+                min="1"
+                max="15"
+                value="3"
+                name="repeat"
+                id="repeat-1"
+              />
+            </div>
+            <button type="button" onclick="submitTx('binary')">Transmit</button>
+          </form>
+        </fieldset>
+        <fieldset>
+          <legend>Decimal payload</legend>
+          <form id="decimal">
+            <div class="control">
+              <label for="code">Decimal:</label
+              ><input type="number" name="code" id="code" />
+            </div>
+            <div class="control">
+              <label for="len">Length:</label
+              ><input type="number" min="1" name="len" id="len" />
+            </div>
+            <div class="control">
+              <label for="protocol">Protocol:</label
+              ><select name="protocol" id="protocol"></select>
+            </div>
+            <div class="control">
+              <label for="repeat">Repeat transmit:</label
+              ><input
+                type="number"
+                min="1"
+                max="15"
+                value="3"
+                name="repeat"
+                id="repeat-2"
+              />
+            </div>
+            <button type="button" onclick="submitTx('decimal')">
+              Transmit
+            </button>
+          </form>
+        </fieldset>
+      </li>
+      <li>
+        <fieldset>
+          <legend>Frequency</legend>
+          <form action="settings">
+            <div class="control">
+              <select id="frequency" name="frequency"></select>
+            </div>
+            <input type="submit" value="Save" />
+          </form>
+        </fieldset>
+        <fieldset>
+          <legend>Bandwidth</legend>
+          <form action="settings">
+            <div class="control">
+              <input
+                id="AM270"
+                name="bandwidth"
+                type="radio"
+                value="256"
+              /><label for="AM270">256 KHz</label>
+            </div>
+            <div class="control">
+              <input
+                id="AM650"
+                name="bandwidth"
+                type="radio"
+                value="650"
+              /><label for="AM650">650 KHz</label>
+            </div>
+            <div class="control">
+              <input
+                id="AM812"
+                name="bandwidth"
+                type="radio"
+                value="812"
+              /><label for="AM812">812 KHz</label>
+            </div>
+            <input type="submit" value="Save" />
+          </form>
+        </fieldset>
+        <fieldset>
+          <legend>Access Point</legend>
+          <form action="settings">
+            <div class="control">
+              <label for="ssid">SSID</label>
+              <input id="ssid" name="ssid" type="text" />
+            </div>
+            <div class="control">
+              <label for="password">Password</label>
+              <input id="password" name="password" type="text" />
+            </div>
+            <input type="submit" value="Save" />
+          </form>
+        </fieldset>
+      </li>
+    </ul>
   </body>
 </html>
