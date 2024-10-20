@@ -10,8 +10,7 @@
   - Frank Oltmanns / <first name>.<last name>(at)gmail(dot)com
   - Max Horn / max(at)quendi(dot)de
   - Robert ter Vehn / <first name>.<last name>(at)gmail(dot)com
-  - Per Ivar Nerseth / <first name>(at)<last name>(dot)com
-  
+
   Project home: https://github.com/sui77/rc-switch/
 
   This library is free software; you can redistribute it and/or
@@ -57,13 +56,20 @@
 #endif
 
 // Number of maximum high/Low changes per packet.
-// We can handle up to 67 bits (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
-#define RCSWITCH_MAX_CHANGES 255 // increased from 67 to 255 and using char array to hold longer bit streams
+// We can handle up to (unsigned long) => 32 bit * 2 H/L changes per bit + 2 for sync
+// Для keeloq нужно увеличить RCSWITCH_MAX_CHANGES до 23+1+66*2+1=157
+#define RCSWITCH_MAX_CHANGES 67 // default 67
+
+// separationLimit: minimum microseconds between received codes, closer codes are ignored.
+// according to discussion on issue #14 it might be more suitable to set the separation
+// limit to the same time as the 'low' part of the sync signal for the current protocol.
+// should be set to the minimum value of pulselength * the sync signal
+#define RCSWITCH_SEPARATION_LIMIT 4100
 
 class RCSwitch
 {
 
-  public:
+public:
     RCSwitch();
 
     void switchOn(int nGroupNumber, int nSwitchNumber);
@@ -78,30 +84,31 @@ class RCSwitch
     void switchOff(char sGroup, int nDevice);
 
     void sendTriState(const char *sCodeWord);
-    void send(unsigned long code, unsigned int length);
-    void send(const char *sBitString);
+    void send(unsigned long long code, unsigned int length);
+    void send(const char *sCodeWord);
 
-#ifndef RCSwitchDisableReceiving
+#if not defined(RCSwitchDisableReceiving)
     void enableReceive(int interrupt);
     void enableReceive();
     void disableReceive();
     bool available();
     void resetAvailable();
 
-    unsigned long getReceivedValue();
+    unsigned long long getReceivedValue();
     unsigned int getReceivedBitlength();
     unsigned int getReceivedDelay();
     unsigned int getReceivedProtocol();
     unsigned int *getReceivedRawdata();
-    char *getReceivedRawBits();
+    uint8_t getNumProtos();
 #endif
 
     void enableTransmit(int nTransmitterPin);
     void disableTransmit();
     void setPulseLength(int nPulseLength);
     void setRepeatTransmit(int nRepeatTransmit);
-#ifndef RCSwitchDisableReceiving
+#if not defined(RCSwitchDisableReceiving)
     void setReceiveTolerance(int nPercent);
+    void setReceiveProtocolMask(unsigned long long mask);
 #endif
 
     /**
@@ -112,8 +119,8 @@ class RCSwitch
      */
     struct HighLow
     {
-        uint16_t high;
-        uint16_t low;
+        uint8_t high;
+        uint8_t low;
     };
 
     /**
@@ -122,18 +129,15 @@ class RCSwitch
      */
     struct Protocol
     {
-        uint8_t protocolId;
-
-        uint8_t changeCount; // the number of changes in the protocol (assuming all transmissions are the same lenght)
-                             // testing the protocol match is mutch faster with comparing the changeCount
-
         /** base pulse length in microseconds, e.g. 350 */
         uint16_t pulseLength;
+        uint8_t PreambleFactor;
+        HighLow Preamble;
+        uint8_t HeaderFactor;
+        HighLow Header;
 
-        HighLow sync;  // sync bit before the data bits (normally zero, i.e. 0, 0)
-        HighLow zero;  // zero bit
-        HighLow one;   // one bit
-        HighLow pause; // pause bit
+        HighLow zero;
+        HighLow one;
 
         /**
          * If true, interchange high and low logic levels in all transmissions.
@@ -152,60 +156,43 @@ class RCSwitch
          * FOO.low*pulseLength microseconds.
          */
         bool invertedSignal;
+        uint16_t Guard;
     };
 
     void setProtocol(Protocol protocol);
     void setProtocol(int nProtocol);
     void setProtocol(int nProtocol, int nPulseLength);
-    Protocol getProtocol();
-    void transmit(HighLow pulses);
-    int getReceiverInterrupt();
 
-    /* 
-     * helper function for debugging decoding binary inputs (used in the receiveProtocol method)
-     */
-    static char *dec2binWzerofill(unsigned long Dec, unsigned int bitLength);
-
-  private:
+private:
     char *getCodeWordA(const char *sGroup, const char *sDevice, bool bStatus);
     char *getCodeWordB(int nGroupNumber, int nSwitchNumber, bool bStatus);
     char *getCodeWordC(char sFamily, int nGroup, int nDevice, bool bStatus);
     char *getCodeWordD(char group, int nDevice, bool bStatus);
+    void transmit(HighLow pulses);
 
-#ifndef RCSwitchDisableReceiving
+#if not defined(RCSwitchDisableReceiving)
     static void handleInterrupt();
     static bool receiveProtocol(const int p, unsigned int changeCount);
     int nReceiverInterrupt;
 #endif
     int nTransmitterPin;
     int nRepeatTransmit;
-
     Protocol protocol;
 
-#ifndef RCSwitchDisableReceiving
+#if not defined(RCSwitchDisableReceiving)
     static int nReceiveTolerance;
-    volatile static unsigned long nReceivedValue;
+    volatile static unsigned long long nReceivedValue;
+    volatile static unsigned long long nReceiveProtocolMask;
     volatile static unsigned int nReceivedBitlength;
     volatile static unsigned int nReceivedDelay;
     volatile static unsigned int nReceivedProtocol;
     const static unsigned int nSeparationLimit;
-    /* 
-     * timings[0] contains pause timing, followed by an optional sync bit and a number of data bits
+    /*
+     * timings[0] contains sync timing, followed by a number of bits
      */
     static unsigned int timings[RCSWITCH_MAX_CHANGES];
-
-    /* 
-     * timings_copy[0] contains a copy of the timings after a protocol has been succesfully found
-     * this ensures that the returned raw timings in fact were the original raw timings and not
-     * timings that are constanty modified
-     */
-    static unsigned int timings_copy[RCSWITCH_MAX_CHANGES];
-
-    /* 
-     * receivedBits[0] contains the raw bits as 1 and 0s
-     */
-    static char receivedBits[RCSWITCH_MAX_CHANGES];
-
+    // буфер длительностей последних четырех пакетов, [0] - последний
+    static unsigned int buftimings[4];
 #endif
 };
 
